@@ -13,15 +13,12 @@
 # Specify the correct path to your data in the path var on line 22.
 # The path for the output files is also specified on line 23.
 ########################################################################################################################
-
 import os
 import re
 import csv
 import logging
 import click
 from lxml import html
-import pprint as pp
-
 from lxml.etree import ParserError
 
 SOURCE_PATH = os.path.join(str(os.path.dirname(os.path.realpath(__file__))), 'data')
@@ -43,33 +40,28 @@ def get_file_list(base_source_path):
 
 def check_files(base_source_path, list_to_check, run_type):
     logging.debug('\nStarting file scan . . .')
-    results_list = []
 
     for source_file in list_to_check:
         logging.debug("\nChecking {} . . .\n".format(source_file))
         with open(os.path.join(base_source_path, source_file), encoding="utf8") as this_file:
             data = this_file.read()
             try:
-                yield build_result_struct(data, run_type)
+                yield from build_result_struct(data, run_type)
             except ParserError:
                 # Safely handle html parsing errors
                 logging.error("\nError parsing file {}\n", source_file)
                 return
 
-    # if run_type == 'users':
-    #     results_list = sorted(results_list, key=lambda k: k['name'])
-
     logging.debug("######################################\n")
     logging.debug("      !! SCANNING COMPLETE !!         \n")
     logging.debug("######################################\n")
-    # return results_list
 
 
 def get_header_row(run_type):
     # Yield header
     # Shared between users and post
     header = ['name', 'username']
-    if run_type == 'posts':
+    if run_type == 'posts':  # Specific to posts
         header.append('post')
     return header
 
@@ -113,7 +105,7 @@ def output_results(base_output_path, filename, output_type, run_type, results):
     logging.info('\nSaving results to {}'.format(output_path))
     with open(output_path, 'w+', encoding="utf8") as this_output:
         if output_type == 'txt':
-            this_output.write(str(results))
+            this_output.write(str(list(results)))
         elif output_type == 'csv':
             keys = get_header_row(run_type)
             dict_writer = csv.DictWriter(this_output, keys)
