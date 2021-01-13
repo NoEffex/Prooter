@@ -22,6 +22,8 @@ import click
 from lxml import html
 import pprint as pp
 
+from lxml.etree import ParserError
+
 SOURCE_PATH = os.path.join(str(os.path.dirname(os.path.realpath(__file__))), 'data')
 OUTPUT_PATH = os.path.join(str(os.path.dirname(os.path.realpath(__file__))), 'results')
 
@@ -47,7 +49,12 @@ def check_files(base_source_path, list_to_check, run_type):
         logging.debug("\nChecking {} . . .\n".format(source_file))
         with open(os.path.join(base_source_path, source_file), encoding="utf8") as this_file:
             data = this_file.read()
-            yield build_result_struct(data, run_type)
+            try:
+                yield build_result_struct(data, run_type)
+            except ParserError:
+                # Safely handle html parsing errors
+                logging.error("\nError parsing file {}\n", source_file)
+                return
 
     # if run_type == 'users':
     #     results_list = sorted(results_list, key=lambda k: k['name'])
