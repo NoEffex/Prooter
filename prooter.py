@@ -111,7 +111,7 @@ def output_results(base_output_path, filename, output_type, run_type, results):
             dict_writer = csv.DictWriter(this_output, keys)
             dict_writer.writeheader()
             for result in results:
-                dict_writer.writerows(result)
+                dict_writer.writerow(result)
 
 
 @click.command()
