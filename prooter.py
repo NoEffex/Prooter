@@ -47,20 +47,27 @@ def check_files(base_source_path, list_to_check, run_type):
         logging.debug("\nChecking {} . . .\n".format(source_file))
         with open(os.path.join(base_source_path, source_file), encoding="utf8") as this_file:
             data = this_file.read()
-            build_result_struct(data, results_list, run_type)
+            yield build_result_struct(data, run_type)
 
-    if run_type == 'users':
-        results_list = sorted(results_list, key=lambda k: k['name'])
+    # if run_type == 'users':
+    #     results_list = sorted(results_list, key=lambda k: k['name'])
 
     logging.debug("######################################\n")
     logging.debug("      !! SCANNING COMPLETE !!         \n")
     logging.debug("######################################\n")
-    logging.info(pp.pprint(results_list))
-    logging.debug("\n######################################\n")
-    return results_list
+    # return results_list
 
 
-def build_result_struct(data, results_list, run_type):
+def get_header_row(run_type):
+    # Yield header
+    # Shared between users and post
+    header = ['name', 'username']
+    if run_type == 'posts':
+        header.append('post')
+    return header
+
+
+def build_result_struct(data, run_type):
     post_list = []
     name_list = re.findall('(?:<span class="author--name">)(.*)(?:</span>)', data)
     username_list = re.findall('(?:<span class="author--username">)(.*)(?:</span>)', data)
@@ -73,15 +80,14 @@ def build_result_struct(data, results_list, run_type):
     for j in range(len(name_list)):
         if run_type == 'users':
             data_dict = {'name': name_list[j], 'username': username_list[j]}
-            if data_dict not in results_list:
-                results_list.append(data_dict)
+            yield data_dict
         elif run_type == 'posts':
             data_dict = {'name': name_list[j], 'username': username_list[j]}
             try:
                 data_dict['post'] = post_list[j].text_content().replace("\n", "").strip()
             except IndexError:
                 continue
-            results_list.append(data_dict)
+            yield data_dict
 
 
 def get_output_filename(run_type):
@@ -94,18 +100,19 @@ def get_output_filename(run_type):
     return output_filename
 
 
-def output_results(base_output_path, this_result, filename, output_type):
+def output_results(base_output_path, filename, output_type, run_type, results):
     output_filename = filename + '.' + output_type
     output_path = os.path.join(base_output_path, output_filename)
     logging.info('\nSaving results to {}'.format(output_path))
     with open(output_path, 'w+', encoding="utf8") as this_output:
         if output_type == 'txt':
-            this_output.write(str(this_result))
+            this_output.write(str(results))
         elif output_type == 'csv':
-            keys = this_result[0].keys()
+            keys = get_header_row(run_type)
             dict_writer = csv.DictWriter(this_output, keys)
             dict_writer.writeheader()
-            dict_writer.writerows(this_result)
+            for result in results:
+                dict_writer.writerows(result)
 
 
 @click.command()
@@ -117,13 +124,13 @@ def run(run_type, file_format):
     logging.basicConfig(format="%(asctime)s: %(message)s", level=logging.INFO, datefmt="%H:%M:%S")
     file_list = get_file_list(SOURCE_PATH)
     if run_type == 'all':
-        output_results(OUTPUT_PATH, check_files(SOURCE_PATH, file_list, 'users'), get_output_filename('users'),
-                       file_format)
-        output_results(OUTPUT_PATH, check_files(SOURCE_PATH, file_list, 'posts'), get_output_filename('posts'),
-                       file_format)
+        output_results(OUTPUT_PATH, get_output_filename('users'), file_format, run_type,
+                       check_files(SOURCE_PATH, file_list, 'users'))
+        output_results(OUTPUT_PATH, get_output_filename('posts'), file_format, run_type,
+                       check_files(SOURCE_PATH, file_list, 'posts'))
     else:
-        output_results(OUTPUT_PATH, check_files(SOURCE_PATH, file_list, run_type), get_output_filename(run_type),
-                       file_format)
+        output_results(OUTPUT_PATH, get_output_filename(run_type), file_format, run_type,
+                       check_files(SOURCE_PATH, file_list, run_type))
 
 
 if __name__ == '__main__':
