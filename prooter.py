@@ -50,7 +50,7 @@ def check_files(base_source_path, list_to_check, run_type):
             except ParserError:
                 # Safely handle html parsing errors
                 logging.error("\nError parsing file {}\n", source_file)
-                return
+                continue
 
     logging.debug("######################################\n")
     logging.debug("      !! SCANNING COMPLETE !!         \n")
